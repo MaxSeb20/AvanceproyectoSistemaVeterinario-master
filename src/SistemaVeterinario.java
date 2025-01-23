@@ -8,6 +8,16 @@ import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.collections.transformation.FilteredList;
+
+import javafx.scene.chart.*;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
+import javafx.scene.layout.VBox;
+
+
+import java.util.HashMap;
+import java.util.Map;
 
 
 import java.time.LocalDate;
@@ -19,9 +29,27 @@ public class SistemaVeterinario extends Application {
     private ObservableList<Cliente> listaClientes = FXCollections.observableArrayList();
     private ObservableList<Cita> listaCitas = FXCollections.observableArrayList();
     private TableView<Cliente> tablaClientes = new TableView<>(); // Mover tablaClientes a nivel de clase
+    private ComboBox<Cliente> comboCliente; // Declaración global de comboCliente
+    private TableView<HistorialMedico> tablaHistorial; // Declaración global de tablaHistorial
 
     @Override
+
     public void start(Stage primaryStage) {
+        // Crear clientes
+        Cliente cliente1 = new Cliente("Juan", "123456789", "Calle 1");
+        Mascota mascota1 = new Mascota("Rex", "Perro");
+        mascota1.agregarHistorial(new HistorialMedico(LocalDate.of(2025, 1, 1), "Fractura", "Reposo"));
+        mascota1.agregarHistorial(new HistorialMedico(LocalDate.of(2025, 1, 2), "Infección", "Antibióticos"));
+        cliente1.agregarMascota(mascota1);
+
+        Cliente cliente2 = new Cliente("Ana", "987654321", "Calle 2");
+        Mascota mascota2 = new Mascota("Luna", "Gato");
+        mascota2.agregarHistorial(new HistorialMedico(LocalDate.of(2025, 1, 3), "Infección", "Antibióticos"));
+        cliente2.agregarMascota(mascota2);
+
+        listaClientes.addAll(cliente1, cliente2);
+
+
         // TabPane para dividir las secciones
         TabPane tabPane = new TabPane();
         tabPane.setStyle("-fx-background-color: #f4f4f4; -fx-tab-min-height: 40px; -fx-tab-max-height: 40px; -fx-tab-text-color: #333;");
@@ -41,7 +69,20 @@ public class SistemaVeterinario extends Application {
         tabCitas.setContent(crearGestionCitas());
         tabCitas.setClosable(false);
 
-        tabPane.getTabs().addAll(tabBienvenida, tabClientes, tabCitas);
+        // Pestaña Historial Médico
+        Tab tabHistorialMedico = new Tab("Historial Médico");
+        tabHistorialMedico.setContent(crearHistorialMedico());
+        tabHistorialMedico.setClosable(false);
+
+        Tab tabReportes = new Tab("Reportes y Estadísticas");
+        tabReportes.setContent(crearPaginaReportes());
+        tabReportes.setClosable(false);
+
+        tabPane.getTabs().add(tabReportes);
+
+
+        // Agregar las pestañas al TabPane
+        tabPane.getTabs().addAll(tabBienvenida, tabClientes, tabCitas, tabHistorialMedico, tabReportes);
 
         Scene scene = new Scene(tabPane, 900, 600);
         scene.getStylesheets().add("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap");
@@ -49,6 +90,7 @@ public class SistemaVeterinario extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
     }
+
 
     private VBox crearPaginaBienvenida(TabPane tabPane) {
         // Crear el logo
@@ -60,13 +102,13 @@ public class SistemaVeterinario extends Application {
         lblTitulo.setStyle("-fx-font-size: 30px; -fx-font-family: 'Roboto'; -fx-font-weight: bold; -fx-text-fill: #333;");
 
         Label lblDescripcion = new Label(
-                "Este sistema le permite gestionar clientes, mascotas y citas para la clínica veterinaria.\n" +
-                        "Utilice las pestañas de la parte superior para navegar entre las diferentes secciones del sistema.\n\n" +
-                        "- En la pestaña 'Gestión de Clientes y Mascotas', puede agregar, editar y eliminar clientes y sus mascotas.\n" +
-                        "- En la pestaña 'Gestión de Citas', puede agendar, editar y eliminar citas para las mascotas."
+                "Este sistema le permite gestionar de forma eficiente los clientes, mascotas, citas y sus historiales médicos en la clínica veterinaria.\n\n" +
+                        "- En la pestaña 'Gestión de Clientes y Mascotas', puede registrar clientes, agregar sus mascotas y ver su historial médico.\n" +
+                        "- En la pestaña 'Gestión de Citas', puede gestionar las citas con funcionalidades para agregar, editar y eliminar.\n" +
+                        "- En la pestaña 'Historial Médico', puede registrar diagnósticos y tratamientos, y consultar el historial detallado por mascota."
         );
         lblDescripcion.setStyle("-fx-font-size: 14px; -fx-font-family: 'Roboto'; -fx-text-fill: #666;");
-
+        lblDescripcion.setWrapText(true);
 
         Button btnContinuar = new Button("Continuar");
         btnContinuar.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-padding: 10px 20px; -fx-font-size: 14px; -fx-font-family: 'Roboto'; -fx-background-radius: 5px;");
@@ -76,6 +118,49 @@ public class SistemaVeterinario extends Application {
         layoutBienvenida.setStyle("-fx-alignment: center; -fx-padding: 40; -fx-background-color: #ffffff; -fx-border-color: #ddd; -fx-border-width: 1px; -fx-border-radius: 10px;");
         return layoutBienvenida;
     }
+
+    private VBox crearPaginaReportes() {
+        // Crear un mapa para contar los diagnósticos
+        Map<String, Integer> frecuenciaDiagnosticos = new HashMap<>();
+
+        // Recorre la lista de clientes y suma los diagnósticos en el historial de cada mascota
+        for (Cliente cliente : listaClientes) {
+            for (Mascota mascota : cliente.getMascotas()) {
+                for (HistorialMedico historial : mascota.getHistorialMedico()) {
+                    String diagnostico = historial.getDiagnostico();
+                    frecuenciaDiagnosticos.put(diagnostico,
+                            frecuenciaDiagnosticos.getOrDefault(diagnostico, 0) + 1);
+                }
+            }
+        }
+
+        // Configurar los ejes del gráfico
+        CategoryAxis xAxis = new CategoryAxis();
+        xAxis.setLabel("Diagnósticos");
+
+        NumberAxis yAxis = new NumberAxis();
+        yAxis.setLabel("Frecuencia");
+
+        // Crear el gráfico de barras
+        BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
+        barChart.setTitle("Frecuencia de Diagnósticos");
+
+        // Agregar los datos reales al gráfico
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("Diagnósticos Reales");
+
+        for (Map.Entry<String, Integer> entry : frecuenciaDiagnosticos.entrySet()) {
+            series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+        }
+
+        barChart.getData().add(series);
+
+        // Configurar el diseño
+        VBox layout = new VBox(10, barChart);
+        layout.setStyle("-fx-padding: 20;");
+        return layout;
+    }
+
 
     private VBox crearGestionClientes() {
         // Campos para cliente
@@ -107,6 +192,23 @@ public class SistemaVeterinario extends Application {
                 txtDireccion.clear();
             } else {
                 mostrarAlerta("Error", "Todos los campos del cliente deben ser completados.");
+            }
+        });
+
+        Button btnAgregarHistorial = new Button("Agregar Registro");
+        btnAgregarHistorial.setOnAction(e -> {
+            Cliente clienteSeleccionado = comboCliente.getValue();
+            if (clienteSeleccionado != null) {
+                // Ejemplo: Agrega un registro al historial del cliente seleccionado
+                clienteSeleccionado.agregarHistorial(new HistorialMedico(
+                        LocalDate.now(), // Fecha actual
+                        "Diagnóstico de ejemplo", // Diagnóstico
+                        "Tratamiento de ejemplo"  // Tratamiento
+                ));
+                // Actualiza la tabla para reflejar el nuevo registro
+                tablaHistorial.setItems(FXCollections.observableArrayList(clienteSeleccionado.getHistorialMedico()));
+            } else {
+                mostrarAlerta("Error", "Debe seleccionar un cliente para agregar un registro.");
             }
         });
 
@@ -185,6 +287,195 @@ public class SistemaVeterinario extends Application {
 
 
     }
+
+    private VBox crearHistorialMedico() {
+        TextField txtBuscarCliente = new TextField();
+        txtBuscarCliente.setPromptText("Buscar cliente...");
+
+        // ComboBox para seleccionar cliente
+        comboCliente = new ComboBox<>(listaClientes);
+
+        FilteredList<Cliente> listaFiltrada = new FilteredList<>(listaClientes, p -> true);
+        txtBuscarCliente.textProperty().addListener((observable, oldValue, newValue) -> {
+            listaFiltrada.setPredicate(cliente -> {
+                if (newValue == null || newValue.isEmpty()) {
+                    return true;
+                }
+                String lowerCaseFilter = newValue.toLowerCase();
+                return cliente.getNombre().toLowerCase().contains(lowerCaseFilter);
+            });
+        });
+        comboCliente.setItems(listaFiltrada);
+
+        // Tabla para mostrar el historial médico
+        tablaHistorial = new TableView<>();
+        TableColumn<HistorialMedico, String> colFecha = new TableColumn<>("Fecha");
+        colFecha.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getFecha().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        ));
+        colFecha.setPrefWidth(150); // Ajustar ancho de columna
+
+        TableColumn<HistorialMedico, String> colDiagnostico = new TableColumn<>("Diagnóstico");
+        colDiagnostico.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getDiagnostico()
+        ));
+        colDiagnostico.setPrefWidth(200); // Ajustar ancho de columna
+
+        TableColumn<HistorialMedico, String> colTratamiento = new TableColumn<>("Tratamiento");
+        colTratamiento.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getTratamiento()
+        ));
+        colTratamiento.setPrefWidth(200); // Ajustar ancho de columna
+
+        tablaHistorial.getColumns().addAll(colFecha, colDiagnostico, colTratamiento);
+        colFecha.setSortType(TableColumn.SortType.DESCENDING); // Ordena descendente por fecha
+        tablaHistorial.getSortOrder().add(colFecha);
+
+        // Campos para agregar un nuevo registro
+        Label lblDiagnostico = new Label("Diagnóstico:");
+        TextField txtDiagnostico = new TextField();
+        txtDiagnostico.setPromptText("Ejemplo: Fractura");
+
+        Label lblTratamiento = new Label("Tratamiento:");
+        TextField txtTratamiento = new TextField();
+        txtTratamiento.setPromptText("Ejemplo: Reposo completo");
+
+        Button btnAgregarRegistro = new Button("Agregar Registro");
+
+        // Acción para el botón de agregar registro
+        btnAgregarRegistro.setOnAction(e -> {
+            Cliente clienteSeleccionado = comboCliente.getValue();
+            if (clienteSeleccionado != null) {
+                String diagnostico = txtDiagnostico.getText();
+                String tratamiento = txtTratamiento.getText();
+                if (!diagnostico.isEmpty() && !tratamiento.isEmpty()) {
+                    clienteSeleccionado.agregarHistorial(new HistorialMedico(LocalDate.now(), diagnostico, tratamiento));
+                    tablaHistorial.setItems(FXCollections.observableArrayList(clienteSeleccionado.getHistorialMedico()));
+                    txtDiagnostico.clear();
+                    txtTratamiento.clear();
+                    Alert confirmacion = new Alert(Alert.AlertType.INFORMATION);
+                    confirmacion.setTitle("Registro Agregado");
+                    confirmacion.setHeaderText(null);
+                    confirmacion.setContentText("El registro se ha agregado exitosamente.");
+                    confirmacion.showAndWait();
+                } else {
+                    mostrarAlerta("Error", "Debe llenar los campos de diagnóstico y tratamiento.");
+                }
+            } else {
+                mostrarAlerta("Error", "Debe seleccionar un cliente para agregar un registro.");
+            }
+        });
+
+        // Botón para cargar el historial médico
+        Button btnCargarHistorial = new Button("Cargar Historial Médico");
+        btnCargarHistorial.setOnAction(e -> {
+            Cliente clienteSeleccionado = comboCliente.getValue();
+            if (clienteSeleccionado != null) {
+                tablaHistorial.setItems(FXCollections.observableArrayList(clienteSeleccionado.getHistorialMedico()));
+            } else {
+                mostrarAlerta("Error", "Debe seleccionar un cliente para cargar el historial médico.");
+            }
+        });
+
+        // Layout de los controles
+        VBox controles = new VBox(10, new Label("Buscar Cliente:"), txtBuscarCliente, comboCliente, lblDiagnostico, txtDiagnostico, lblTratamiento, txtTratamiento, btnAgregarRegistro, btnCargarHistorial);
+        VBox tabla = new VBox(10, tablaHistorial);
+
+        // Ajusta el ancho de la tabla para que ocupe más espacio
+        tablaHistorial.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        tablaHistorial.setPrefWidth(600); // Aumentar el ancho total de la tabla
+
+        HBox layout = new HBox(20, controles, tabla);
+        layout.setStyle("-fx-padding: 20; -fx-background-color: #ffffff;");
+        btnAgregarRegistro.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10px 20px; -fx-background-radius: 5px;");
+        btnCargarHistorial.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10px 20px; -fx-background-radius: 5px;");
+
+        return new VBox(layout);
+    }
+
+
+    public class ReportesEstadisticas extends Application {
+        private ObservableList<Cita> listaCitas = FXCollections.observableArrayList();
+
+        @Override
+        public void start(Stage primaryStage) {
+            TabPane tabPane = new TabPane();
+
+            Tab tabReportes = new Tab("Reportes y Estadísticas");
+            tabReportes.setContent(crearPaginaReportes());
+            tabReportes.setClosable(false);
+
+            tabPane.getTabs().add(tabReportes);
+
+            Scene scene = new Scene(tabPane, 900, 600);
+            primaryStage.setTitle("Reportes y Estadísticas");
+            primaryStage.setScene(scene);
+            primaryStage.show();
+        }
+
+        private VBox crearPaginaReportes() {
+            // Datos de ejemplo para las citas
+            listaCitas.add(new Cita("Diagnóstico A", "2025-01-11"));
+            listaCitas.add(new Cita("Diagnóstico B", "2025-01-12"));
+            listaCitas.add(new Cita("Diagnóstico A", "2025-01-13"));
+            listaCitas.add(new Cita("Diagnóstico C", "2025-01-14"));
+
+            // Generar estadísticas
+            Map<String, Integer> frecuenciaDiagnosticos = new HashMap<>();
+            for (Cita cita : listaCitas) {
+                frecuenciaDiagnosticos.put(cita.getDiagnostico(),
+                        frecuenciaDiagnosticos.getOrDefault(cita.getDiagnostico(), 0) + 1);
+            }
+
+            // Crear el gráfico de barras
+            CategoryAxis xAxis = new CategoryAxis();
+            xAxis.setLabel("Diagnósticos");
+
+            NumberAxis yAxis = new NumberAxis();
+            yAxis.setLabel("Frecuencia");
+
+            BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
+            barChart.setTitle("Frecuencia de Diagnósticos");
+
+            XYChart.Series<String, Number> series = new XYChart.Series<>();
+            series.setName("Diagnósticos");
+
+            for (Map.Entry<String, Integer> entry : frecuenciaDiagnosticos.entrySet()) {
+                series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+            }
+
+            barChart.getData().add(series);
+
+            // Layout principal
+            VBox layout = new VBox(20, barChart);
+            layout.setStyle("-fx-padding: 20;");
+            return layout;
+        }
+
+        public static void main(String[] args) {
+            launch(args);
+        }
+
+        // Clase auxiliar para representar citas
+        public class Cita {
+            private String diagnostico;
+            private String fecha;
+
+            public Cita(String diagnostico, String fecha) {
+                this.diagnostico = diagnostico;
+                this.fecha = fecha;
+            }
+
+            public String getDiagnostico() {
+                return diagnostico;
+            }
+
+            public String getFecha() {
+                return fecha;
+            }
+        }
+    }
+
 
 
     private VBox crearGestionCitas() {

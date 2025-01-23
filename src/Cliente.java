@@ -13,7 +13,13 @@ public class Cliente {
         this.direccion = direccion;
         this.mascotas = new ArrayList<>();
     }
+    public void agregarHistorial(HistorialMedico registro) {
+        historialMedico.add(registro);
+    }
 
+    public List<HistorialMedico> getHistorialMedico() {
+        return historialMedico;
+    }
     public String getNombre() {
         return nombre;
     }
@@ -33,6 +39,11 @@ public class Cliente {
     public void agregarMascota(Mascota mascota) {
         mascotas.add(mascota);
     }
+
+    private List<HistorialMedico> historialMedico = new ArrayList<>();
+
+
+
 
     @Override
     public String toString() {
